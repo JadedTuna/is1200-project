@@ -40,11 +40,11 @@ if ! git -c "core.whitespace=-blank-at-eof" diff-index --check --cached $against
 fi
 
 # ensure formatting
-tempfile=$(mktmp)
+tempfile=$(mktemp)
 repo=$(git rev-parse --show-toplevel)
 git diff --cached --name-only --diff-filter=ACM | while read fname; do
 	case "$fname" in
-		"*.c"|"*.h")
+		*.c|*.h)
 				current="${repo}/${fname}"
 				clang-format "$current" > "$tempfile"
 				if ! diff "$current" "$tempfile"; then
