@@ -40,7 +40,18 @@ if ! git -c "core.whitespace=-blank-at-eof" diff-index --check --cached $against
 fi
 
 # ensure formatting
-git diff --cached --name-only --diff-filter=ACM -z | while read fname; do
-	echo $fname
+tempfile=$(mktmp)
+repo=$(git rev-parse --show-toplevel)
+git diff --cached --name-only --diff-filter=ACM | while read fname; do
+	case "$fname" in
+		"*.c"|"*.h")
+				current="${repo}/${fname}"
+				clang-format "$current" > "$tempfile"
+				if ! diff "$current" "$tempfile"; then
+					die "Error: unstable formatting"
+				fi
+			;;
+		*) ;;
+	esac
 done
 
