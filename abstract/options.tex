@@ -1,0 +1,220 @@
+
+% ----- OPTION SETUP -----
+
+\setmainfont{EB Garamond}
+%\setsansfont{Gill Sans MT Book}
+\setmonofont{AnonymousPro}[Scale=MatchLowercase]
+\setmathrm{EB Garamond}
+
+\geometry{left = 3.5cm, right = 3.5cm, top = 4cm, bottom = 4cm}
+\newcommand\titlegeometry{\newgeometry{left = 3cm, right = 3cm, top = 5cm, bottom = 5cm}}
+
+\setitemize{noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt}
+
+\counterwithin*{figure}{section}
+\counterwithin*{table}{section}
+\renewcommand{\thetable}{\arabic{section}.\arabic{table}}
+\renewcommand{\thefigure}{\arabic{section}.\arabic{figure}}
+
+
+\usetikzlibrary{
+    matrix,
+    calc,
+    automata,
+    positioning,
+}
+\tikzset{
+    between/.style args={#1 and #2}{
+         at = ($(#1)!0.5!(#2)$)
+    }
+    cell/.style = {
+        nodes = {
+            rectangle,
+            draw = black,
+        },
+    },
+    vectormat/.style = {
+        matrix of nodes,
+        minimum height = 2.5em,
+        minimum width = 2.5em,
+        row sep = -\pgflinewidth,
+        column sep = -\pgflinewidth,
+    },
+    node distance = 15pt,
+    nodes in empty cells,
+    text depth=0.5ex,
+    text height=2ex,
+}
+
+\hypersetup{ %
+    colorlinks = true,
+    linkcolor = [RGB]{29, 120, 91},
+    urlcolor = [RGB]{120, 29, 29},
+}
+
+\graphicspath{ {/home/verglasz/media/images/logos} }
+
+% --------- UTILITY MACROS --------
+
+\newcommand\acomment[1]{\relax}
+\newcommand*\mailto[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+
+\newcommand\mailsbox[1]{\parbox[t]{0.6\textwidth}{\begin{spacing}{1} #1 \end{spacing}}}
+
+\newcommand*\fig[1]{figure~\ref{fig:#1}}
+\newcommand*\eq[1]{equation~\ref{eq:#1}}
+\newcommand*\tab[1]{table~\ref{tab:#1}}
+
+\newcommand*\xor{\oplus}
+
+\makeatletter
+\newcommand*{\rn}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\newcommand*\currentx{\the\tikz@lastxsaved}
+\newcommand*\currenty{\the\tikz@lastysaved}
+\makeatother
+\newcommand*\currentcoordinate{\currentx,\currenty}
+
+\makeatletter
+\def\vecmatrix (#1) #2 {
+    \gdef\a@sep{\noexpand\a@sep}
+    \gdef\my@cols{}
+    \foreach \i in {0,...,#2} { \xdef\my@cols{\my@cols \i \a@sep} }
+    \gdef\a@sep{ \& \\ }
+    \matrix (#1) [
+        below = of varname,
+        vectormat,
+        column 1/.style = {font = \ttfamily},
+        column 2/.style = {cell},
+        ampersand replacement = \&,
+    ] {
+        \my@cols
+    }
+}
+\makeatother
+
+% ----- CUSTOMIZATION -----
+
+% -------- AUTHOR 1 --- FIXME
+\newcommand*\kthmail{\mailto{wiktord@kth.se}}
+\newcommand*\personalmail{}
+\newcommand*\firstname{W\kern-0.03em{}iktor}
+\newcommand*\lastname{Dobrosierdow}
+\newcommand*\ddob{24}
+\newcommand*\mmob{05}
+\newcommand*\yyob{2000}
+\newcommand*\pnlast{T112}
+
+
+\newcommand*\fullname{\firstname~~\lastname}
+\makeatletter
+\newcommand*\personnummer{\expandafter\@gobbletwo\yyob\mmob\ddob-\pnlast}
+\makeatother
+\newcommand*\isodob{\yyob--\mmob--\ddob}
+\newcommand*\thedob{Date of birth: \isodob}
+\newcommand*\thepn{Personnummer: \texttt{\personnummer{}}}
+\newcommand*\themail{E-mail: \kthmail{}}
+\newcommand*\myauthor{\fullname}
+
+% -------- AUTHOR 2
+\newcommand*\Bkthmail{\mailto{lomanto@kth.se}}
+\newcommand*\Bpersonalmail{\mailto{gv.lomanto@gmail.com}}
+\newcommand*\Bfirstname{V\kern-0.16em{}alerio}
+\newcommand*\Blastname{Lomanto}
+\newcommand*\Bddob{17}
+\newcommand*\Bmmob{07}
+\newcommand*\Byyob{1995}
+\newcommand*\Bpnlast{0174}
+
+\newcommand*\Bfullname{\Bfirstname~~\Blastname}
+\makeatletter
+\newcommand*\Bpersonnummer{\expandafter\@gobbletwo\Byyob\Bmmob\Bddob-\Bpnlast}
+\makeatother
+\newcommand*\Bisodob{\Byyob--\Bmmob--\Bddob}
+\newcommand*\Bthedob{Date of birth: \Bisodob}
+\newcommand*\Bthepn{Personnummer: \texttt{\Bpersonnummer{}}}
+\newcommand*\Bthemail{E-mail: \mailsbox{\Bkthmail{}\\\Bpersonalmail{}}}
+\newcommand*\Bmyauthor{\Bfullname}
+
+\newcommand*\makeauthor[1][{}]{
+    \begin{minipage}[t]{0.45\textwidth}
+    \expandafter\textsc{\csname #1myauthor\endcsname} \par
+    \csname #1thedob \endcsname \par
+    \csname #1thepn \endcsname \par
+    \csname #1themail \endcsname
+    \end{minipage}
+}
+
+\newcommand*\mysubtitle{Program Loader -- Advanced Project}
+\newcommand*\thisyear{2021}
+\newcommand*\thiscourse{Computer Hardware Engineering}
+\newcommand*\thisprogram{TCOMK}
+\newcommand*\thisperiod{VT21}
+
+\author{\myauthor, \Bmyauthor}
+\title{\thiscourse{} -- \thisprogram{} \thisperiod{}}
+\date{\today}
+
+\newcommand*\phylologo{ %
+    \includegraphics[width = 0.95\paperwidth, height = \paperheight, keepaspectratio]{phylolines} %
+}
+\newcommand*\logo{\phylologo}
+
+\backgroundsetup{
+    pages=some,
+    angle=0,
+    scale=1,
+    opacity=.1,
+    position={current page.center},
+    vshift=-6.5cm,
+    color=black,
+    contents={ \logo },
+}
+
+\newcommand*\undefbg{\backgroundsetup{pages=some,contents={}}}
+
+\newenvironment{logotitlepage}
+    { %
+        \titlegeometry
+        \begin{titlepage}
+        \thispagestyle{empty}
+        \BgThispage
+        \begin{spacing}{2}
+    }
+    { %
+        \end{spacing}
+        \end{titlepage}
+    }
+
+\newcommand*\makemytitle{ %
+    \begin{logotitlepage}
+        \begin{center}
+            \makebox[\textwidth][c]{\huge \thetitle}
+            \par {\LARGE \mysubtitle } \par
+            \thedate
+        \end{center}
+
+        \vfill
+
+        \begin{minipage}[t]{0.45\textwidth}
+            \textsc{\Bmyauthor} \par
+            \Bthedob  \par
+            \Bthepn \par
+            \Bthemail
+
+        \end{minipage}
+        \hfill
+        \begin{minipage}[t]{0.45\textwidth}
+        \begin{flushright}
+            \textsc{\myauthor} \par
+            \thedob  \par
+            \thepn \par
+            \themail
+        \end{flushright}
+        \end{minipage}
+    \end{logotitlepage}
+    \restoregeometry
+    \undefbg
+}
+
+\setcounter{section}{-1}
+

@@ -1,0 +1,101 @@
+%!TeX program = lualatex
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{fontspec}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsfonts,amsthm}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{rotating}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{chngcntr}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{pbox}
+\usepackage{tcolorbox}
+\usepackage{microtype}
+\usepackage{titling}
+\usepackage{background}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{karnaugh-map}
+\usepackage{siunitx}
+\usepackage{tikz}
+
+% -------- options --------
+
+\include{options}
+\newcommand*\eeprom{\textsc{eeprom}}
+\newcommand*\itwoc{I\textsuperscript{2}C}
+\newcommand*\ioshield{Basic I/O Shield}
+
+\definecolor{CodeBG}{RGB}{27,31,35}
+\newtcbox\code[1][{}]{
+    nobeforeafter,
+    tcbox raise base,
+    size=tight,
+    colframe=CodeBG,
+    fontupper=\ttfamily\small,
+    arc=3pt,
+    boxsep=2pt,
+    left=1pt,
+    right=1pt,
+    opacityback=0.95,
+    boxrule=0pt,
+    opacityframe=0,
+    #1
+}
+% -------- DOCUMENT -------
+
+\begin{document}
+
+\makemytitle
+
+\newpage
+\section{Abstract}
+
+\subsection{Objective and requirements}
+We aim to be able to read data from an \eeprom{} chip, displaying its contents
+and offering the user the ability to load and run executable binaries
+with access to some simple syscalls --- chiefly,
+the ability to print output to the screen and at least read-access file I/O from the \eeprom{} itself.
+
+If time allows, we would like to implement a simple filesystem driver through which to access the data on the \eeprom{}, rather than reading raw bytes.
+
+\subsection{Solution}
+We intend to develop our project on the ChipKIT Uno32/uC32 board, together with the \ioshield{}.
+We will use serial communication with the computer for debugging purposes.
+Communication with an \eeprom{} chip will be using \itwoc{}.
+
+Display will be used by the loader to display the directory structure,
+with navigation being done using switches on the \ioshield{}.
+
+Development will be done in a Unix environment using MCB32tools,
+with the code written primarily in C, with some parts being Assembly.
+
+\subsection{Verification}
+To assist with debugging, we will implement UART serial communication with an external host,
+so that we have an easy way to monitor the execution of our programs
+(e.g., by \code[right*=0pt]{printf}ing to a terminal).
+
+We plan on testing the correctness of the routines loading data from the \eeprom{} into RAM
+by checking that text data is correctly read,
+both through the display and through serial communication with our machines.
+
+We will check that the loaded programs execute correctly,
+by writing test programs which test out various functionality.
+
+If we implement filesystem capabilities,
+we will likewise test the correctness of our data loading routines.
+
+\subsection{Contributions}
+We will divide our work in the following way: Wiktor will focus on data loading (\eeprom{} communication and filesystem access) while Valerio will work on program loading into memory and implementing syscalls.
+
+\subsection{Reflections}
+In the final abstract, we will discuss and reflect on what happened in the project, specifically what was achieved and what was not, as well as what were some of the problems encountered.
+
+\end{document}
+
