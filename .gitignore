@@ -350,3 +350,9 @@ TSWLatexianTemp*
 
 # End of https://www.toptal.com/developers/gitignore/api/c,latex,assembler
 
+# Sublime Text
+*.sublime-*
+
+# General untracked stuff
+untracked
+.deps
