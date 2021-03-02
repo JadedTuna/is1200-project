@@ -34,9 +34,9 @@ MEMORY
   kseg0_program_mem    (rx)  : ORIGIN = 0x9D001000, LENGTH = 0x7E000
   kseg0_eeprom_mem           : ORIGIN = 0x9D07F000, LENGTH = 0x1000
   kseg0_boot_mem             : ORIGIN = 0x9FC00490, LENGTH = 0
-  kseg1_boot_mem             : ORIGIN = 0xBFC00000, LENGTH = 0 
+  kseg1_boot_mem             : ORIGIN = 0xBFC00000, LENGTH = 0
   debug_exec_mem             : ORIGIN = 0xBFC02000, LENGTH = 0
-  config3                    : ORIGIN = 0xBFC02FF0, LENGTH = 4 
+  config3                    : ORIGIN = 0xBFC02FF0, LENGTH = 4
   config2                    : ORIGIN = 0xBFC02FF4, LENGTH = 4
   config1                    : ORIGIN = 0xBFC02FF8, LENGTH = 4
   config0                    : ORIGIN = 0xBFC02FFC, LENGTH = 4
@@ -61,12 +61,12 @@ _DBG_CODE_ADDR          = ORIGIN(debug_exec_mem);
 
 /*************************************************************************
  *  Bootloader program directives.
- *  
+ *
  * _IMAGE_TYPE
  *
  *  image type:
  */
-     
+
 _imageReserved                      = 0x00000000 ;
 _imageMPIDE                         = 0x00000001 ;  /* This is a normal MPIDE sketch                                                                                                    */
 _imageBootFlashBootloader           = 0x00000002 ;  /* This is a boot flash bootloader                                                                                                  */
@@ -76,20 +76,20 @@ _imageSplitFlashBootloader          = 0x00000008 ;  /* This has bootloader code 
  /*
  *  Instructions for the bootloader
  */
-                                                                       
+
 _imageFullFlashEraseLess4KEEProm    = 0x00010000 ;  /* The original bootloader method of erasing all of program flash except the last 4K reserved for eeprom                            */
 _imageJustInTimeFlashErase          = 0x00020000 ;  /* Only flash pages written too needed by the sketch is erased                                                                      */
 _imageLinkerSpecifiedFlashErase     = 0x00040000 ;  /* The linker defines the flash range to erase                                                                                      */
 _imageFullFlashErase                = 0x00080000 ;  /* All of flash is erased                                                                                                           */
 _imageExecutionJumpAddress          = 0x01000000 ;  /* the bootloader will jump to the execution jump address immediately after programming                                             */
 _imageExecutionJumpToFirstInFlash   = 0x02000000 ;  /* the bootloader will jump to the first sketch loaded in flash ignoring the execution jump address immediately after programming   */
- 
-/*  
- * _IMAGE_FLASH_SIZE 
+
+/*
+ * _IMAGE_FLASH_SIZE
  *
  *      Typically _imageJustInTimeFlashErase is selected to just erase the pages
  *      of flash that code is written too; thus leaving all other flash pages untouched.
- *  
+ *
  *      If _imageLinkerSpecifiedFlashErase set, then the range
  *      starting from _ebase_address for _IMAGE_FLASH_SIZE bytes are erased.
  *
@@ -99,9 +99,9 @@ _imageExecutionJumpToFirstInFlash   = 0x02000000 ;  /* the bootloader will jump 
  *      if _imageFullFlashEraseLess4KEEProm is set, all of flash less the last 4K is
  *      erased, this is the old default. This bit could be set to make a program flash bootloader
  *      erasing everything but the old flash. If NOTHING is set, this will be the default as this is the old behavior.
- *  
+ *
  *  _JUMP_ADDR
- *  
+ *
  *      This is the address that the bootloader will jump to start execution
  *      of the sketch. This is almost always _RESET_ADDR.
  *
@@ -134,3 +134,4 @@ SECTIONS
 
 /* From here out every linker script is the same, so just include it */
 INCLUDE "p32mx-common.ld"
+

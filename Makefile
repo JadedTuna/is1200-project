@@ -6,29 +6,35 @@ TTYDEV		?=/dev/ttyUSB0
 TTYBAUD		?=115200
 
 # Name of the project
-PROGNAME	= kernel
+PROGNAME = kernel
 
 # Linkscript
 # LINKSCRIPT	:= p$(shell echo "$(DEVICE)" | tr '[:upper:]' '[:lower:]').ld
-LINKSCRIPT	:= src/kernel/p32mx340f512h.ld
+
+# Resources
+LINKSCRIPT := src/p32mx340f512h.ld
+INCLUDEDIR := src/include
+SOURCEDIR := src/kernel
+BUILDDIR := build
+
 
 # Compiler and linker flags
-CFLAGS		+= -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float
-ASFLAGS		+= -msoft-float
-LDFLAGS		+= -T $(LINKSCRIPT) -lc
+CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR)
+ASFLAGS += -msoft-float
+LDFLAGS += -T $(LINKSCRIPT) -lc
 
 # Filenames
-ELFFILE		= $(PROGNAME).elf
-HEXFILE		= $(PROGNAME).hex
+ELFFILE = $(PROGNAME).elf
+HEXFILE = $(PROGNAME).hex
 
-CFILES          = $(wildcard src/kernel/*.c)
-ASFILES         = $(wildcard src/kernel/*.S)
-SYMSFILES	= $(wildcard *.syms)
+CFILES = $(wildcard $(SOURCEDIR)/*.c)
+ASFILES = $(wildcard $(SOURCEDIR)/*.S)
+SYMSFILES = $(wildcard *.syms)
 
 # Object file names
-OBJFILES        = $(CFILES:.c=.c.o)
-OBJFILES        +=$(ASFILES:.S=.S.o)
-OBJFILES	+=$(SYMSFILES:.syms=.syms.o)
+OBJFILES =  $(patsubst $(SOURCEDIR),$(BUILDDIR),$(CFILES:.c=.c.o))
+OBJFILES += $(patsubst $(SOURCEDIR),$(BUILDDIR),$(ASFILES:.S=.S.o))
+OBJFILES += $(SYMSFILES:.syms=.syms.o)
 
 # Hidden directory for dependency files
 DEPDIR = .deps
@@ -74,6 +80,7 @@ $(DEPDIR):
 
 # Compile C files
 %.c.o: %.c envcheck | $(DEPDIR)
+	echo $@ $<
 	$(CC) $(CFLAGS) -c -MD -o $@ $<
 	@cp $*.c.d $(df).c.P; sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $*.c.d >> $(df).c.P; $(RM) $*.c.d
 
@@ -89,3 +96,4 @@ $(DEPDIR):
 # Check dependencies
 -include $(CFILES:%.c=$(DEPDIR)/%.c.P)
 -include $(ASFILES:%.S=$(DEPDIR)/%.S.P)
+

@@ -11,9 +11,10 @@ farcall:
 	jalr	$a0
 	nop
 
-	POP		$v1	
-	POP		$v0
-	POP		$ra
+	POP	$v1
+	POP	$v0
+	POP	$ra
 
-	jr		$ra	
+	jr	$ra
 	nop
+
