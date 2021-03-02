@@ -32,8 +32,8 @@ ASFILES = $(wildcard $(SOURCEDIR)/*.S)
 SYMSFILES = $(wildcard *.syms)
 
 # Object file names
-OBJFILES =  $(patsubst $(SOURCEDIR),$(BUILDDIR),$(CFILES:.c=.c.o))
-OBJFILES += $(patsubst $(SOURCEDIR),$(BUILDDIR),$(ASFILES:.S=.S.o))
+OBJFILES =  $(patsubst $(SOURCEDIR)/%.c,%.c.o,$(CFILES))
+OBJFILES += $(patsubst $(SOURCEDIR)/%.S,%.S.o,$(ASFILES))
 OBJFILES += $(SYMSFILES:.syms=.syms.o)
 
 # Hidden directory for dependency files
@@ -47,6 +47,7 @@ all: $(HEXFILE)
 
 clean:
 	$(RM) $(HEXFILE) $(ELFFILE) $(OBJFILES)
+	$(RM) -rf build/*
 	$(RM) -R $(DEPDIR)
 
 picocom:
@@ -70,24 +71,25 @@ install: envcheck
 	$(TARGET)avrdude -v -p $(shell echo "$(DEVICE)" | tr '[:lower:]' '[:upper:]') -c stk500v2 -P "$(TTYDEV)" -b $(TTYBAUD) -U "flash:w:$(HEXFILE)"
 
 $(ELFFILE): $(OBJFILES) envcheck
-	$(CC) $(CFLAGS) -o $@ $(OBJFILES) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $(OBJFILES:%=$(BUILDDIR)/%) $(LDFLAGS)
 
 $(HEXFILE): $(ELFFILE) envcheck
 	$(TARGET)bin2hex -a $(ELFFILE)
 
 $(DEPDIR):
 	@mkdir -p $@
+	@mkdir -p build
 
 # Compile C files
-%.c.o: %.c envcheck | $(DEPDIR)
-	echo $@ $<
-	$(CC) $(CFLAGS) -c -MD -o $@ $<
-	@cp $*.c.d $(df).c.P; sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $*.c.d >> $(df).c.P; $(RM) $*.c.d
+%.c.o: $(SOURCEDIR)/%.c envcheck | $(DEPDIR)
+	echo $*.c.d $(df).c.P $$
+	$(CC) $(CFLAGS) -c -MD -o $(BUILDDIR)/$@ $<
+	@cp $(BUILDDIR)/$*.c.d $(df).c.P; sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $(BUILDDIR)/$*.c.d >> $(df).c.P
 
 # Compile ASM files with C pre-processor directives
-%.S.o: %.S envcheck | $(DEPDIR)
-	$(CC) $(CFLAGS) $(ASFLAGS) -c -MD -o $@ $<
-	@cp $*.S.d $(df).S.P; sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $*.S.d >> $(df).S.P; $(RM) $*.S.d
+%.S.o: $(SOURCEDIR)/%.S envcheck | $(DEPDIR)
+	$(CC) $(CFLAGS) $(ASFLAGS) -c -MD -o $(BUILDDIR)/$@ $<
+	@cp $(BUILDDIR)/$*.S.d $(df).S.P; sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $(BUILDDIR)/$*.S.d >> $(df).S.P;
 
 # Link symbol lists to object files
 %.syms.o: %.syms
