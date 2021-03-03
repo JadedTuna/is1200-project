@@ -17,6 +17,23 @@ else
 	against=$(git hash-object -t tree /dev/null)
 fi
 
+repo_root=$(git rev-parse --show-toplevel)
+
+# run clang-format on everything
+git diff --cached --name-only --diff-filter=ACM | while read fname; do
+	case fname in
+		*.c|*.h)
+				current="${repo_root}/${fname}"
+				if ! clang-format -i "$current"; then
+					die "Clang-format error, somehow you broke the autoformatter??"
+				else
+					git add "$current"
+				fi
+			;;
+		*);;
+	esac
+done
+
 # prevent non-ASCII names
 if [ $(git diff --cached --name-only --diff-filter=ACR -z $against |
 	LC_ALL=C tr -d '[ -~]\0' |
@@ -39,14 +56,13 @@ if ! git -c "core.whitespace=-blank-at-eof" diff-index --check --cached $against
 	die "Error: introducing diff markers or spurious whitespace."
 fi
 
-# ensure formatting
-repo_root=$(git rev-parse --show-toplevel)
+# ensure formatting and no errors
 git diff --cached --name-only --diff-filter=ACM | while read fname; do
 	case "$fname" in
 		*.c|*.h)
 				current="${repo_root}/${fname}"
 				if ! clang-format "$current" -n -Werror; then
-					die "Error: unstable formatting"
+					die "Clang-format error; does your code compile?"
 				fi
 			;;
 		*) ;;
