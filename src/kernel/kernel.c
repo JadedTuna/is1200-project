@@ -4,6 +4,8 @@
 #include <pic32mx.h>
 #include <stdio.h>
 
+void farcall(unsigned int *);
+
 int RAMcode[] = {
     0x3c02bf88, // lui	v0,0xbf88
     0x34426110, // ori	v0,v0,0x6110
@@ -39,13 +41,13 @@ void exception_handler(int exc) {
     int last_addr = 0, sp = 0;
     __asm__("mfc0	%0, $14, 0" : "=r"(last_addr));
     __asm__("addi	%0, $sp, 0" : "=r"(sp));
-    serial_priority_printf("exception occurred: 0x%x\r\n", exc & 0xff);
-    serial_priority_printf("last address: 0x%x\r\n", last_addr);
-    serial_priority_printf("sp: 0x%x\r\n", sp);
-    serial_priority_printf("BMXCON: 0x%x\r\n", BMXCON);
-    serial_priority_printf("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
-    serial_priority_printf("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
-    serial_priority_printf("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
+    serial_printf("exception occurred: 0x%x\r\n", exc & 0xff);
+    serial_printf("last address: 0x%x\r\n", last_addr);
+    serial_printf("sp: 0x%x\r\n", sp);
+    serial_printf("BMXCON: 0x%x\r\n", BMXCON);
+    serial_printf("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
+    serial_printf("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
+    serial_printf("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
     for (;;) {
         // Blink between 0xff and the error code
         simple_delay(1000);
@@ -66,7 +68,7 @@ int main(void) {
     enable_interrupts();
     int ebase = 0;
     __asm__("mfc0	%0, $15, 1" : "=r"(ebase));
-    serial_priority_printf(
+    serial_printf(
         "0x%x\r\n"
         "0x%x\r\n",
         INTCON,
@@ -74,45 +76,45 @@ int main(void) {
 
     int sp = 0;
     __asm__("addi	%0, $sp, 0" : "=r"(sp));
-    serial_priority_printf("main: sp = 0x%x\r\n", sp);
+    serial_printf("main: sp = 0x%x\r\n", sp);
 
     /* 6 KB of user memory; 4 KB data, 2 KB prog */
-    serial_priority_write("Setting BMXDKPBA\r\n");
+    serial_write("Setting BMXDKPBA\r\n");
     BMXDKPBA = 14 * 1024;
-    serial_priority_write("Setting BMXDUDBA\r\n");
+    serial_write("Setting BMXDUDBA\r\n");
     BMXDUDBA = 26 * 1024;
-    serial_priority_write("Setting BMXDUPBA\r\n");
+    serial_write("Setting BMXDUPBA\r\n");
     BMXDUPBA = 30 * 1024;
     PORTE = 0x3c;
 
-    serial_printf("BMXCON: 0x%x\r\n", BMXCON);
-    serial_printf("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
-    serial_printf("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
-    serial_printf("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
-    serial_printf("BMXDRMSZ: 0x%x\r\n", BMXDRMSZ);
-    // serial_printf("BMXPUPBA: 0x%x\r\n", BMXPUPBA);
-    // serial_printf("BMXPFMSZ: 0x%x\r\n", BMXPFMSZ);
-    // serial_printf("BMXBOOTSZ: 0x%x\r\n", BMXBOOTSZ);
-    serial_printf("main: 0x%x\r\n", main);
+    serial_printf_async("BMXCON: 0x%x\r\n", BMXCON);
+    serial_printf_async("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
+    serial_printf_async("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
+    serial_printf_async("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
+    serial_printf_async("BMXDRMSZ: 0x%x\r\n", BMXDRMSZ);
+    // serial_printf_async("BMXPUPBA: 0x%x\r\n", BMXPUPBA);
+    // serial_printf_async("BMXPFMSZ: 0x%x\r\n", BMXPFMSZ);
+    // serial_printf_async("BMXBOOTSZ: 0x%x\r\n", BMXBOOTSZ);
+    serial_printf_async("main: 0x%x\r\n", main);
 
     PORTE = 0xaa;
     // return;
 
-    serial_write("loading user code\r\n");
-    int i;
+    serial_write_async("loading user code\r\n");
+    unsigned i;
     unsigned *userprog = (unsigned *)(0x7F000000 + BMXDUPBA);
     for (i = 0; i < sizeof(RAMcode) / sizeof(int); i++) {
-        serial_printf("0x%x\r\n", RAMcode[i]);
-        serial_printf("Writing to 0x%x\r\n", userprog + i);
+        serial_printf_async("0x%x\r\n", RAMcode[i]);
+        serial_printf_async("Writing to 0x%x\r\n", userprog + i);
         serial_flush();
         userprog[i] = RAMcode[i];
     }
     serial_flush();
 
     // return;
-    serial_priority_write("before farcall\r\n");
+    serial_write("before farcall\r\n");
     farcall(userprog);
-    serial_write("after farcall\r\n");
+    serial_write_async("after farcall\r\n");
 
     return 0;
 }

@@ -9,8 +9,8 @@
 #include <string.h>
 
 char TX_BUFFER[4096] = { 0 };
-volatile int TX_BUFFER_IND = 0;
-int TX_BUFFER_FREE = sizeof(TX_BUFFER);
+volatile size_t TX_BUFFER_IND = 0;
+size_t TX_BUFFER_FREE = sizeof(TX_BUFFER);
 
 void uart1tx_int_set(char enabled) {
     if (enabled) {
@@ -22,6 +22,9 @@ void uart1tx_int_set(char enabled) {
     }
 }
 
+/**
+ * Initialize serial interface.
+ */
 void serial_init(void) {
     // UART1 setup
     U1BRG = PIC32_BRG_BAUD(80 * 1000 * 1000, 9600); // set baud rate to 9600
@@ -40,9 +43,23 @@ void serial_init(void) {
     uart1tx_int_set(0);
 }
 
-void serial_write(const char *s) {
-    int len = strlen(s);
-    while (len) {
+/**
+ * Non-blocking serial write for NULL-terminated strings.
+ *
+ * @param s String to write.
+ */
+void serial_write_async(const char *s) {
+    serial_nwrite_async(s, strlen(s));
+}
+
+/**
+ * Non-blocking serial write.
+ *
+ * @param s Data buffer.
+ * @param size Number of bytes to write.
+ */
+void serial_nwrite_async(const char *s, size_t size) {
+    while (size) {
         // Write a chunk
         // Wait until there is at least a single byte available
         while (!(volatile int)TX_BUFFER_FREE)
@@ -52,13 +69,13 @@ void serial_write(const char *s) {
         disable_interrupts();
 
         // Copy a chunk into buffer
-        int min_len = len > TX_BUFFER_FREE ? TX_BUFFER_FREE : len;
+        int min_len = size > TX_BUFFER_FREE ? TX_BUFFER_FREE : size;
         strncpy(
             TX_BUFFER + (sizeof(TX_BUFFER) - TX_BUFFER_FREE), // first available byte
             s,
             min_len);
         s += min_len;
-        len -= min_len;
+        size -= min_len;
 
         TX_BUFFER_FREE -= min_len;
         if ((IEC(0) & (1 << PIC32_IRQ_U1TX)) == 0)
@@ -68,12 +85,73 @@ void serial_write(const char *s) {
     }
 }
 
+/**
+ * Block until output buffer is empty.
+ */
 void serial_flush(void) {
     while ((volatile int)TX_BUFFER_FREE != sizeof(TX_BUFFER))
         ;
 }
 
-void serial_printf(const char *format, ...) {
+/**
+ * Non-blocking serial printf.
+ *
+ * @param format Format string.
+ * @param ... Arguments.
+ * @return Number of bytes written.
+ */
+int serial_printf_async(const char *format, ...) {
+    char buffer[4096] = { 0 };
+    va_list ap;
+    int rv;
+
+    va_start(ap, format);
+    rv = vsnprintf(buffer, ~(size_t)0, format, ap);
+    va_end(ap);
+    serial_write_async(buffer);
+
+    return rv;
+}
+
+/**
+ * Blocking serial write for NULL-terminated strings.
+ *
+ * @param s String to write.
+ */
+void serial_write(const char *s) {
+    serial_nwrite(s, strlen(s));
+}
+
+/**
+ * Blocking serial write.
+ *
+ * @param s Data buffer.
+ * @param size Number of bytes to write.
+ */
+void serial_nwrite(const char *s, size_t size) {
+    size_t i;
+
+    disable_interrupts();
+    uart1tx_int_set(0);
+    for (i = 0; i < size; i++) {
+        while (!(U1STA & PIC32_USTA_TRMT))
+            ;
+        U1TXREG = s[i];
+    }
+    // FIXME: this should not blindly enable the IRQ
+    // and instead save its status earlier and load here
+    uart1tx_int_set(1);
+    enable_interrupts();
+}
+
+/**
+ * Blocking serial printf.
+ *
+ * @param format Format string.
+ * @param ... Arguments.
+ * @return Number of bytes written.
+ */
+int serial_printf(const char *format, ...) {
     char buffer[4096] = { 0 };
     va_list ap;
     int rv;
@@ -82,31 +160,6 @@ void serial_printf(const char *format, ...) {
     rv = vsnprintf(buffer, ~(size_t)0, format, ap);
     va_end(ap);
     serial_write(buffer);
-}
 
-/* Blocking write bypassing the buffer */
-void serial_priority_write(const char *s) {
-    disable_interrupts();
-    uart1tx_int_set(0);
-    while (*s) {
-        while (!(U1STA & PIC32_USTA_TRMT))
-            ;
-        U1TXREG = *s++;
-    }
-    // FIXME: this should not blindly enable the IRQ
-    // and instead save its status earlier and load here
-    uart1tx_int_set(1);
-    enable_interrupts();
-}
-
-/* Blocking write bypassing the buffer */
-void serial_priority_printf(const char *format, ...) {
-    char buffer[4096] = { 0 };
-    va_list ap;
-    int rv;
-
-    va_start(ap, format);
-    rv = vsnprintf(buffer, ~(size_t)0, format, ap);
-    va_end(ap);
-    serial_priority_write(buffer);
+    return rv;
 }

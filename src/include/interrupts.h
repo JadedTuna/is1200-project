@@ -8,6 +8,8 @@ static inline void disable_interrupts(void) {
 }
 
 void setup_interrupts(void);
+void enable_interrupts(void);
+void disable_interrupts(void);
 void default_isr(int);
 
 #endif /* _INTERRUPTS_H */

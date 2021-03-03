@@ -19,10 +19,10 @@ void setup_interrupts(void) {
 
 void default_isr(register /* otherwise it corrupts the stack */ int interrupt) {
     // __asm__("addi	%0, $k1, 0" : "=r"(interrupt));
-    int irq = INTSTAT & 0b11111;
+    // int irq = INTSTAT & 0b11111;
     if (interrupt) {
         // PORTE = interrupt;
-        // serial_priority_printf("\r\n"
+        // serial_printf("\r\n"
         // 	"\tinterrupt: 0x%x\r\n"
         // 	"\tirq: 0x%x\r\n"
         // 	"\tIFS(0): 0x%x\r\n", interrupt, irq, IFS(0));
