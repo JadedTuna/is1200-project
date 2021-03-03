@@ -19,7 +19,7 @@ BUILDDIR := build
 
 
 # Compiler and linker flags
-CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR)
+CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR) -Wall -Wextra
 ASFLAGS += -msoft-float
 LDFLAGS += -T $(LINKSCRIPT) -lc
 
