@@ -40,7 +40,7 @@ OBJFILES += $(SYMSFILES:.syms=.syms.o)
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
 
-.PHONY: all clean install envcheck picocom disasm
+.PHONY: all clean install envcheck picocom sendelf_crc32 disasm
 .SUFFIXES:
 
 all: $(HEXFILE)
@@ -49,12 +49,21 @@ clean:
 	$(RM) $(HEXFILE) $(ELFFILE) $(OBJFILES)
 	$(RM) -rf build/*
 	$(RM) -R $(DEPDIR)
+	$(RM) helpers/sendelf_crc32
 
 picocom:
-	picocom -b 9600 -y n $(TTYDEV)
+	picocom -b 9600 -y n --send-cmd "./helpers/sendelf_crc32" $(TTYDEV)
+
+sendelf_crc32:
+	@echo "$(TARGET)" | grep mcb32 > /dev/null && { \
+		echo "This should be compiled in the native environment!"; \
+		exit 1; \
+	} || { \
+		gcc -Wall -Wextra -o helpers/sendelf_crc32 helpers/sendelf_crc32.c; \
+	}
 
 disasm: envcheck
-	mipsel-mcb32-elf-objdump -d $(PROGNAME).elf > untracked/$(PROGNAME).elf.S
+	$(TARGET)objdump -d $(PROGNAME).elf > untracked/$(PROGNAME).elf.S
 
 envcheck:
 	@echo "$(TARGET)" | grep mcb32 > /dev/null || (\
