@@ -70,6 +70,7 @@ void serial_nwrite(const char *s, size_t size) {
     // and instead save its status earlier and load here
     // uart1tx_int_set(1);
     // enable_interrupts();
+    IFSCLR(0) = 1 << 28;
 }
 
 /**

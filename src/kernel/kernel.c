@@ -1,5 +1,7 @@
+#include "common.h"
 #include "elf.h"
 #include "interrupts.h"
+#include "rom.h"
 #include "serial.h"
 
 #include <pic32mx.h>
@@ -102,6 +104,30 @@ void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
     }
 }
 
+void rom_test(void) {
+    int b;
+    itwoc_setup();
+    byte buffer[] = "this is text much texty very text haha";
+    rom_address_t addr = 0x012;
+
+    serial_printf("should see: %c at %x\r\n", *buffer, addr);
+    if (rom_write_byte(addr, buffer[0]))
+        serial_write("writing single byte errored\r\n");
+
+    b = rom_read_byte(addr);
+    if (b < 0)
+        serial_printf("reading single bit errored: %d\r\n", b);
+
+    serial_printf("byte at same address: %c\r\n", b);
+    addr += 128;
+    rom_write_page(addr, buffer + 5, sizeof(buffer) - 5);
+    serial_printf("now saving at %x: %s\r\n", addr, buffer + 5);
+    byte readbuffer[100] = { 0 };
+    rom_read_sequential(addr, readbuffer, sizeof(buffer) - 5);
+    serial_printf("has read: %s", readbuffer);
+    serial_write("test complete\r\n");
+}
+
 int main(void) {
     setup_interrupts();
     TRISE &= ~0xFF;
@@ -123,6 +149,9 @@ int main(void) {
         "User data: %d bytes, user program: %d bytes\r\n",
         BMXDUPBA - BMXDUDBA,
         BMXDRMSZ - BMXDUPBA);
+
+    while (1)
+        rom_test();
 
     uint32_t *entry_point = elf_load_program_serial();
 

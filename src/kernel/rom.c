@@ -6,7 +6,12 @@
 #define _ROM_I2CADDR_R 0xA1
 
 /**/
-#define _ITWOC_SETUP_DELAY() // TODO: unimplemented, might not be needed
+#define _ITWOC_SETUP_DELAY(delay)                    \
+    do {                                             \
+        int __priv;                                  \
+        for (__priv = (delay); __priv > 0; __priv--) \
+            ;                                        \
+    } while (0)
 
 /* i2c control register bits*/
 #define _ENABLE BIT_AT(15)
@@ -46,22 +51,17 @@
 
 /* i2c interrupt flag bit */
 #define _INTFLAG_BIT BIT_AT(31)
+#define _BUSFLAG_BIT BIT_AT(29)
 
 typedef rom_address_t address_t;
-
-void itwoc_setup(void) {
-    IFSCLR(0) = _INTFLAG_BIT;
-    I2C1ADD = 0;
-    I2C1BRG = 800;
-    I2C1CON = _ENABLE | _RELEASE_CLK;
-    _ITWOC_SETUP_DELAY();
-}
 
 /* waits for the i2c master event interrupt flag to be set and clears it
  *  USE CAREFULLY, THIS CAN DEADLOCK
  */
 static inline void _itwoc_wait_clear(void) {
-    while (!(IFS(0) & _INTFLAG_BIT)) { }
+    while (!(IFS(0) & _INTFLAG_BIT)) {
+        IFSCLR(0) = _BUSFLAG_BIT;
+    }
     IFSCLR(0) = _INTFLAG_BIT;
 }
 
@@ -92,7 +92,7 @@ void _rom_start_R(void) {
     do {
         I2C1CONSET = _START_EN;                     // send start
         _itwoc_wait_clear();                        // wait for it
-    } while (_itwoc_transact_byte(_ROM_I2CADDR_W)); // send address and restart if NACK
+    } while (_itwoc_transact_byte(_ROM_I2CADDR_R)); // send address and restart if NACK
 }
 
 int _rom_start_and_send_address_W(address_t addr) {
@@ -106,6 +106,15 @@ int _rom_start_and_send_address_W(address_t addr) {
     if (_itwoc_transact_byte(addr & 0xf)) // send low byte & error if NACK
         return -1;
     return 0;
+}
+
+void itwoc_setup(void) {
+    I2C1ADD = 3;
+    I2C1BRG = 0x184;
+    I2C1CON = _ENABLE;
+    _ITWOC_SETUP_DELAY(10);
+    IFSCLR(0) = _INTFLAG_BIT | _BUSFLAG_BIT;
+    _ITWOC_SETUP_DELAY(60);
 }
 
 int rom_write_byte(address_t addr, byte b) {
@@ -154,9 +163,9 @@ int rom_read_sequential(address_t addr, byte buffer[], int len) {
     if (_rom_start_and_send_address_W(addr)) {
         return -1;
     }
+    _rom_start_R();
     int i;
     for (i = 0; i < len; i++) {
-        _rom_start_R();
         buffer[i] = _itwoc_receive_byte();
         _itwoc_send_ack();
     }
