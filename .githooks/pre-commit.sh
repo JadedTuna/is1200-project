@@ -21,7 +21,7 @@ repo_root=$(git rev-parse --show-toplevel)
 
 # run clang-format on everything
 git diff --cached --name-only --diff-filter=ACM | while read fname; do
-	case fname in
+	case "$fname" in
 		*.c|*.h)
 				current="${repo_root}/${fname}"
 				if ! clang-format -i "$current"; then
