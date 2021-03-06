@@ -1,5 +1,7 @@
 #include "common.h"
+#include "eeprom.h"
 #include "elf.h"
+#include "i2c.h"
 #include "interrupts.h"
 #include "rom.h"
 #include "serial.h"
@@ -128,11 +130,45 @@ void rom_test(void) {
     serial_write("test complete\r\n");
 }
 
+void rom_test_wd(void) {
+    i2c_setup();
+
+    char buf[64] = { 0 };
+
+    int i;
+    for (i = 0; i < 64; i++)
+        buf[i] = i;
+
+    serial_write("input 8 characters: ");
+    serial_read(buf, 8);
+    PORTE = 0x0F;
+
+    buf[9] = 0;
+    serial_printf("Got: %s\r\n", buf);
+    serial_printf("wrote %d bytes\r\n", eeprom_write(0, buf, 8));
+    PORTE = 10;
+    simple_delay(1000);
+    serial_printf("read %d bytes\r\n", eeprom_read(0, buf, 8));
+    serial_hexdump(buf, 8);
+    serial_write("trying again\r\n");
+    for (i = 0; i < 64; i++)
+        buf[i] = 0;
+    serial_hexdump(buf, 8);
+
+    serial_printf("read %d bytes\r\n", eeprom_read(0, buf, 8));
+    serial_hexdump(buf, 8);
+}
+
 int main(void) {
     setup_interrupts();
     TRISE &= ~0xFF;
     PORTE = 0;
     TRISF |= 1;
+
+    // Clear PBCLK divisor
+    OSCCONCLR = PIC32_OSCCON_PBDIV_MASK;
+    // Set PBCLK to 40MHz (divisor 2)
+    OSCCONSET = PIC32_OSCCON_PBDIV_2;
 
     serial_init();
     enable_interrupts();
@@ -150,8 +186,11 @@ int main(void) {
         BMXDUPBA - BMXDUDBA,
         BMXDRMSZ - BMXDUPBA);
 
-    while (1)
-        rom_test();
+    rom_test_wd();
+    for (;;)
+        ;
+    // while (1)
+    // rom_test();
 
     uint32_t *entry_point = elf_load_program_serial();
 

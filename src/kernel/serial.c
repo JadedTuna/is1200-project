@@ -27,7 +27,7 @@ void serial_init(void) {
     rx_buffer.head = rx_buffer.tail = 0;
 
     // UART1 setup
-    U1BRG = PIC32_BRG_BAUD(80 * 1000 * 1000, 9600); // set baud rate to 9600
+    U1BRG = PIC32_BRG_BAUD(80 / 2 * 1000 * 1000, 9600); // set baud rate to 9600
     U1STA = 0;
     U1STASET = PIC32_USTA_UTXISEL_1;
 
