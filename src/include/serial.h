@@ -1,23 +1,27 @@
 #ifndef _SERIAL_H
 #define _SERIAL_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
-extern char TX_BUFFER[4096];
-extern volatile size_t TX_BUFFER_IND;
-extern size_t TX_BUFFER_FREE;
+#define RX_BUFFER_SIZE 512
+typedef struct {
+    uint8_t buffer[RX_BUFFER_SIZE];
+    volatile uint32_t head;
+    volatile uint32_t tail;
+} ring_buffer_t;
+extern ring_buffer_t rx_buffer, tx_buffer;
 
-void uart1tx_int_set(char enabled);
+void uart1rx_int_set(char enabled);
 void serial_init(void);
 
 void serial_write(const char *s);
 void serial_nwrite(const char *s, size_t size);
 int serial_printf(const char *format, ...);
 
-void serial_write_async(const char *s);
-void serial_nwrite_async(const char *s, size_t size);
-int serial_printf_async(const char *format, ...);
-void serial_flush(void);
+void serial_hexdump(const void *data, size_t size);
+
+size_t serial_read_string(void *buffer, size_t size);
+void serial_read(void *buffer, size_t size);
 
 #endif /* _SERIAL_H */

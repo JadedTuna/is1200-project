@@ -8,17 +8,15 @@
 #include <stdio.h>
 #include <string.h>
 
-char TX_BUFFER[4096] = { 0 };
-volatile size_t TX_BUFFER_IND = 0;
-size_t TX_BUFFER_FREE = sizeof(TX_BUFFER);
+ring_buffer_t rx_buffer;
 
-void uart1tx_int_set(char enabled) {
+void uart1rx_int_set(char enabled) {
     if (enabled) {
         IPCSET(6) = 0b00100;               // set priority
-        IECSET(0) = (1 << PIC32_IRQ_U1TX); // enable UART1 TX interrupt
+        IECSET(0) = (1 << PIC32_IRQ_U1RX); // enable UART1 RX interrupt
     } else {
         IPCCLR(6) = 0b11111;             // clear priority
-        IECCLR(0) = 1 << PIC32_IRQ_U1TX; // disable UART1 TX interrupt
+        IECCLR(0) = 1 << PIC32_IRQ_U1RX; // disable UART1 RX interrupt
     }
 }
 
@@ -26,6 +24,8 @@ void uart1tx_int_set(char enabled) {
  * Initialize serial interface.
  */
 void serial_init(void) {
+    rx_buffer.head = rx_buffer.tail = 0;
+
     // UART1 setup
     U1BRG = PIC32_BRG_BAUD(80 * 1000 * 1000, 9600); // set baud rate to 9600
     U1STA = 0;
@@ -40,77 +40,7 @@ void serial_init(void) {
     U1STASET = PIC32_USTA_UTXEN | PIC32_USTA_URXEN;
 
     // Configure UART1 interrupts
-    uart1tx_int_set(0);
-}
-
-/**
- * Non-blocking serial write for NULL-terminated strings.
- *
- * @param s String to write.
- */
-void serial_write_async(const char *s) {
-    serial_nwrite_async(s, strlen(s));
-}
-
-/**
- * Non-blocking serial write.
- *
- * @param s Data buffer.
- * @param size Number of bytes to write.
- */
-void serial_nwrite_async(const char *s, size_t size) {
-    while (size) {
-        // Write a chunk
-        // Wait until there is at least a single byte available
-        while (!(volatile int)TX_BUFFER_FREE)
-            ;
-
-        // Critical section
-        disable_interrupts();
-
-        // Copy a chunk into buffer
-        int min_len = size > TX_BUFFER_FREE ? TX_BUFFER_FREE : size;
-        strncpy(
-            TX_BUFFER + (sizeof(TX_BUFFER) - TX_BUFFER_FREE), // first available byte
-            s,
-            min_len);
-        s += min_len;
-        size -= min_len;
-
-        TX_BUFFER_FREE -= min_len;
-        if ((IEC(0) & (1 << PIC32_IRQ_U1TX)) == 0)
-            uart1tx_int_set(1);
-
-        enable_interrupts();
-    }
-}
-
-/**
- * Block until output buffer is empty.
- */
-void serial_flush(void) {
-    while ((volatile int)TX_BUFFER_FREE != sizeof(TX_BUFFER))
-        ;
-}
-
-/**
- * Non-blocking serial printf.
- *
- * @param format Format string.
- * @param ... Arguments.
- * @return Number of bytes written.
- */
-int serial_printf_async(const char *format, ...) {
-    char buffer[4096] = { 0 };
-    va_list ap;
-    int rv;
-
-    va_start(ap, format);
-    rv = vsnprintf(buffer, ~(size_t)0, format, ap);
-    va_end(ap);
-    serial_write_async(buffer);
-
-    return rv;
+    uart1rx_int_set(1);
 }
 
 /**
@@ -118,9 +48,7 @@ int serial_printf_async(const char *format, ...) {
  *
  * @param s String to write.
  */
-void serial_write(const char *s) {
-    serial_nwrite(s, strlen(s));
-}
+void serial_write(const char *s) { serial_nwrite(s, strlen(s)); }
 
 /**
  * Blocking serial write.
@@ -131,8 +59,8 @@ void serial_write(const char *s) {
 void serial_nwrite(const char *s, size_t size) {
     size_t i;
 
-    disable_interrupts();
-    uart1tx_int_set(0);
+    // disable_interrupts();
+    // uart1tx_int_set(0);
     for (i = 0; i < size; i++) {
         while (!(U1STA & PIC32_USTA_TRMT))
             ;
@@ -140,8 +68,8 @@ void serial_nwrite(const char *s, size_t size) {
     }
     // FIXME: this should not blindly enable the IRQ
     // and instead save its status earlier and load here
-    uart1tx_int_set(1);
-    enable_interrupts();
+    // uart1tx_int_set(1);
+    // enable_interrupts();
 }
 
 /**
@@ -162,4 +90,98 @@ int serial_printf(const char *format, ...) {
     serial_write(buffer);
 
     return rv;
+}
+
+/**
+ * Write a hexdump of the specified memory region.
+ * Same format as hexdump -C on Linux
+ *
+ * @param data Start of memory region.
+ * @param size Size of the memory region.
+ */
+void serial_hexdump(const void *data, size_t size) {
+    size_t i, idx;
+    uint8_t c;
+    char hexbuf[16];
+    const char *buffer = (char *)data;
+
+    serial_printf("%08x  ", buffer);
+
+    for (i = 0, idx = 0; i < size; i++) {
+        idx = i & 0xF;
+        c = ((const uint8_t *)buffer)[i];
+
+        if (idx == 8) {
+            serial_write(" ");
+        } else if (i && !idx) {
+            serial_write("|");
+            serial_nwrite(hexbuf, 8);
+            serial_nwrite(hexbuf + 8, 8);
+            serial_write("|\r\n");
+            serial_printf("%08x  ", ((const uint8_t *)buffer) + i);
+        }
+
+        serial_printf("%02x ", c);
+
+        if (c < 0x20 || c > 0x7e)
+            hexbuf[idx] = '.';
+        else
+            hexbuf[idx] = c;
+    }
+
+    for (++idx; idx < 16; idx++) {
+        hexbuf[idx] = ' ';
+        if (idx == 8)
+            serial_write(" ");
+        serial_write("   ");
+    }
+    serial_write("|");
+    serial_nwrite(hexbuf, 8);
+    serial_nwrite(hexbuf + 8, 8);
+    serial_write("|\r\n");
+}
+
+/**
+ * Read up to `size` bytes until \0.
+ *
+ * @param buffer Buffer to read into.
+ * @param size Read up to this many bytes.
+ * @return Number of bytes read.
+ */
+size_t serial_read_string(void *buffer, size_t size) {
+    char c;
+    size_t num_read = 0;
+    uint8_t *bufptr = (uint8_t *)buffer;
+    do {
+        // Wait until there is data available
+        while (rx_buffer.head == rx_buffer.tail)
+            ;
+        // Read next byte and advance tail
+        c = rx_buffer.buffer[rx_buffer.tail++];
+        bufptr[num_read++] = c;
+        // Keep it in check
+        rx_buffer.tail %= RX_BUFFER_SIZE;
+    } while (c && num_read < size);
+
+    return num_read;
+}
+
+/**
+ * Read `size` bytes in blocking mode.
+ *
+ * @param buffer Buffer to read into.
+ * @param size Number of bytes to read.
+ * @return Number of bytes read.
+ */
+void serial_read(void *buffer, size_t size) {
+    uint8_t *bufptr = buffer;
+    do {
+        // Wait until there is data available
+        while (rx_buffer.head == rx_buffer.tail)
+            ;
+        // Read next byte and advance tail
+        *bufptr++ = rx_buffer.buffer[rx_buffer.tail++];
+        // Keep it in check
+        rx_buffer.tail %= RX_BUFFER_SIZE;
+    } while (--size);
 }
