@@ -18,32 +18,51 @@ void setup_interrupts(void) {
 }
 
 void default_isr(register /* otherwise it corrupts the stack */ int interrupt) {
-    // __asm__("addi	%0, $k1, 0" : "=r"(interrupt));
-    // int irq = INTSTAT & 0b11111;
-    if (interrupt) {
-        // PORTE = interrupt;
-        // serial_printf("\r\n"
-        // 	"\tinterrupt: 0x%x\r\n"
-        // 	"\tirq: 0x%x\r\n"
-        // 	"\tIFS(0): 0x%x\r\n", interrupt, irq, IFS(0));
-        // for (;;);
+    int vector = INTSTAT & 0b11111;
+    if (interrupt && 0) {
+        PORTE = interrupt;
+        serial_printf(
+            "\r\n"
+            "\tinterrupt: 0x%x\r\n"
+            "\tvector: 0x%x\r\n"
+            "\tIFS(0): 0x%x\r\n",
+            interrupt,
+            vector,
+            IFS(0));
+        for (;;)
+            ;
     }
+
+    // Unknown interrupt
+    if (!(IFS(0) & (1 << PIC32_IRQ_U1TX)) && !(IFS(0) & (1 << PIC32_IRQ_U1RX))) {
+        serial_write("another interrupt!\r\n");
+        serial_printf("0x%X\r\n", IFS(0));
+        PORTE = 0x1010;
+        for (;;)
+            ;
+    }
+
+    // TX
     if (IFS(0) & (1 << PIC32_IRQ_U1TX)) {
-        // TX
-        if (TX_BUFFER_IND >= (sizeof(TX_BUFFER) - TX_BUFFER_FREE)) {
-            // Done sending
-            disable_interrupts();
-            TX_BUFFER_IND = 0;
-            TX_BUFFER_FREE = sizeof(TX_BUFFER);
-            uart1tx_int_set(0);
-            enable_interrupts();
-        } else if (sizeof(TX_BUFFER) != TX_BUFFER_FREE) {
-            IFSCLR(0) = 1 << PIC32_IRQ_U1TX;
-            U1TXREG = TX_BUFFER[TX_BUFFER_IND++];
+        // Async writes are gone (for now?), just reset the flag
+        IFSCLR(0) = 1 << PIC32_IRQ_U1TX;
+    }
+
+    // RX
+    if (IFS(0) & (1 << PIC32_IRQ_U1RX)) {
+        uint8_t byte;
+        uint32_t ind;
+        while (U1STA & PIC32_USTA_URXDA) {
+            // Keep reading bytes while there is data available
+            byte = U1RXREG;
+            ind = (rx_buffer.head + 1) % RX_BUFFER_SIZE;
+            // Don't overwrite the current tail position.
+            if (ind != rx_buffer.tail) {
+                rx_buffer.buffer[rx_buffer.head] = byte;
+                rx_buffer.head = ind;
+            }
         }
-        // PORTE = 0x80 | TX_BUFFER_IND;
-    } else {
-        PORTE = 0x80;
-        serial_write("another interrupt\r\n");
+        // Clear interrupt
+        IFSCLR(0) = 1 << PIC32_IRQ_U1RX;
     }
 }
