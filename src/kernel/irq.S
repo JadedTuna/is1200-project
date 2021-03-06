@@ -117,16 +117,12 @@ _default_isr:
 .ent _gen_exception
 _gen_exception:
 	addi	$k0, $ra, 0
-	addi	$k1, $a0, 0
-	mfc0	$a0, $13, 0
-	ehb
-	srl	$a0, $a0, 2
-	jal	exception_handler
-	nop
-	addi	$a0, $k1, 0
+
+	jal	general_exception
+
 	addi	$ra, $k0, 0
 	eret
+	#Technically eret has no delay slot, so this shouldn't be needed
 	nop
 
 .end _gen_exception
-
