@@ -19,7 +19,7 @@ BUILDDIR := build
 
 
 # Compiler and linker flags
-CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR) -Wall -Wextra
+CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR) -Wall -Wextra -Winline
 ASFLAGS += -msoft-float
 LDFLAGS += -T $(LINKSCRIPT) -lc
 
@@ -46,10 +46,10 @@ df = $(DEPDIR)/$(*F)
 all: $(HEXFILE)
 
 clean:
-	$(RM) $(HEXFILE) $(ELFFILE) $(OBJFILES)
-	$(RM) -rf build/*
-	$(RM) -R $(DEPDIR)
 	$(RM) helpers/sendelf_crc32
+	$(RM) -rf $(HEXFILE) $(ELFFILE)
+	$(RM) -rf $(BUILDDIR)/*
+	$(RM) -rf $(DEPDIR)
 
 picocom:
 	picocom -b 9600 -y n --send-cmd "./helpers/sendelf_crc32" $(TTYDEV)
