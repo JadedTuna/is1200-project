@@ -5,12 +5,13 @@
 #include "interrupts.h"
 #include "rom.h"
 #include "serial.h"
+#include "ustar.h"
 
 #include <pic32mx.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void farcall(uint32_t *);
+void farcall(uint8_t *);
 void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2);
 
 FILE *const stdout = 0; // FIXME: this really shouldn't be needed
@@ -39,11 +40,13 @@ void general_exception() {
     uint32_t srvnum, a0, a1, a2;
     uint32_t cause;
     uint8_t exc_code;
+    uint8_t v0;
     // In case this is a syscall
     __asm__("addi   %0, $a0, 0" : "=r"(srvnum));
     __asm__("addi   %0, $a1, 0" : "=r"(a0));
     __asm__("addi   %0, $a2, 0" : "=r"(a1));
     __asm__("addi   %0, $a3, 0" : "=r"(a2));
+    __asm__("addi   %0, $v0, 0" : "=r"(v0));
 
     // Get the exception code
     __asm__("mfc0   %0, $13, 0" : "=r"(cause));
@@ -67,10 +70,12 @@ void general_exception() {
         serial_printf("exception occurred: 0x%x\r\n", exc_code & 0xff);
         serial_printf("last address: 0x%x\r\n", last_addr);
         serial_printf("$sp: 0x%x\r\n", sp);
+        serial_printf("$v0: 0x%x\r\n", v0);
         serial_printf("BMXCON: 0x%x\r\n", BMXCON);
         serial_printf("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
         serial_printf("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
         serial_printf("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
+        serial_hexdump((uint32_t *)sp, 0x80006800 - sp);
         for (;;) {
             // Blink between 0xff and the error code
             simple_delay(1000);
@@ -106,60 +111,44 @@ void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
     }
 }
 
-void rom_test(void) {
-    int b;
-    itwoc_setup();
-    byte buffer[] = "this is text much texty very text haha";
-    rom_address_t addr = 0x012;
+void flash_ustar(void) {
+    uint32_t size;
+    uint32_t eeprom_addr = 0;
+    uint8_t buffer[512] = { 0 };
 
-    serial_printf("should see: %c at %x\r\n", *buffer, addr);
-    if (rom_write_byte(addr, buffer[0]))
-        serial_write("writing single byte errored\r\n");
+    // Read FS size
+    serial_read(&size, 4);
+    serial_printf("size: %lu\r\n", size);
+    int i = 0;
+    size_t chunk_size = sizeof(buffer);
+    while (eeprom_addr < size) {
+        chunk_size = size - eeprom_addr < sizeof(buffer) ? (size - eeprom_addr) : sizeof(buffer);
 
-    b = rom_read_byte(addr);
-    if (b < 0)
-        serial_printf("reading single bit errored: %d\r\n", b);
+        uint32_t block_crc;
+        serial_printf("reading block %d\r\n", i++);
+        if (!crcread(buffer, chunk_size)) {
+            serial_hexdump(buffer, sizeof(buffer));
+            break;
+        }
+        serial_write("done reading\r\n");
+        block_crc = crc32(buffer, chunk_size);
+        serial_printf("writing to eeprom at 0x%x\r\n", eeprom_addr);
+        eeprom_write(eeprom_addr, buffer, chunk_size);
+        // Make sure it was written properly
+        serial_write("reading from eeprom\r\n");
+        serial_printf("read %lu bytes\r\n", eeprom_read(eeprom_addr, buffer, chunk_size));
+        if (!check_crc(block_crc, crc32(buffer, chunk_size))) {
+            serial_hexdump(buffer, sizeof(buffer));
+            break;
+        }
 
-    serial_printf("byte at same address: %c\r\n", b);
-    addr += 128;
-    rom_write_page(addr, buffer + 5, sizeof(buffer) - 5);
-    serial_printf("now saving at %x: %s\r\n", addr, buffer + 5);
-    byte readbuffer[100] = { 0 };
-    rom_read_sequential(addr, readbuffer, sizeof(buffer) - 5);
-    serial_printf("has read: %s", readbuffer);
-    serial_write("test complete\r\n");
+        eeprom_addr += sizeof(buffer);
+    }
+
+    serial_write("Done!\r\n");
 }
 
-void rom_test_wd(void) {
-    i2c_setup();
-
-    char buf[64] = { 0 };
-
-    int i;
-    for (i = 0; i < 64; i++)
-        buf[i] = i;
-
-    serial_write("input 8 characters: ");
-    serial_read(buf, 8);
-    PORTE = 0x0F;
-
-    buf[9] = 0;
-    serial_printf("Got: %s\r\n", buf);
-    serial_printf("wrote %d bytes\r\n", eeprom_write(0, buf, 8));
-    PORTE = 10;
-    simple_delay(1000);
-    serial_printf("read %d bytes\r\n", eeprom_read(0, buf, 8));
-    serial_hexdump(buf, 8);
-    serial_write("trying again\r\n");
-    for (i = 0; i < 64; i++)
-        buf[i] = 0;
-    serial_hexdump(buf, 8);
-
-    serial_printf("read %d bytes\r\n", eeprom_read(0, buf, 8));
-    serial_hexdump(buf, 8);
-}
-
-int main(void) {
+void init(void) {
     setup_interrupts();
     TRISE &= ~0xFF;
     PORTE = 0;
@@ -172,6 +161,7 @@ int main(void) {
 
     serial_init();
     enable_interrupts();
+    i2c_setup();
 
     /* 6 KB of user memory; 4 KB data, 2 KB prog */
     serial_write("Setting BMXDKPBA\r\n");
@@ -185,18 +175,49 @@ int main(void) {
         "User data: %d bytes, user program: %d bytes\r\n",
         BMXDUPBA - BMXDUDBA,
         BMXDRMSZ - BMXDUPBA);
+}
 
-    rom_test_wd();
-    for (;;)
-        ;
-    // while (1)
-    // rom_test();
+int main(void) {
+    uint32_t sp;
+    __asm__("addi   %0, $sp, 0" : "=r"(sp));
+    init();
 
-    uint32_t *entry_point = elf_load_program_serial();
+    serial_printf("sp: 0x%08x\r\n", sp);
 
-    serial_write("Doing farcall\r\n");
-    farcall(entry_point);
-    serial_write("Back in kernel!\r\n");
+    serial_write("WARNING: if the chipKIT is reset during EEPROM operations, "
+                 "a power cycle is needed to properly reset the I2C controller.\r\n");
+    serial_write("WELCOME to kernel land.\r\n");
+    serial_write("Make sure you are using the correct file transfer program! "
+                 "sendelf_crc32 for uploading a program, sendtar_crc32 for "
+                 "flashing a filesystem\r\nThis is set up in the Makefile.\r\n");
+    for (;;) {
+        serial_write("Menu selection:\r\n"
+                     "[F] flash filesystem\r\n"
+                     "[U] upload program\r\n"
+                     "[R] run program.elf from the filesystem\r\nYour selection: ");
+        char choice;
+        serial_read(&choice, 1);
+        serial_write("\r\n");
+        if (choice == 'F' || choice == 'f') {
+            serial_write("Will flash a filesystem.\r\n");
+            flash_ustar();
+        } else if (choice == 'U' || choice == 'u') {
+            serial_write("Will receive and execute a file.\r\n");
+            uint8_t *entry_point = elf_load_program_serial();
+
+            serial_write("Doing farcall\r\n");
+            farcall(entry_point);
+            serial_write("Back in kernel!\r\n");
+        } else if (choice == 'R' || choice == 'r') {
+            serial_write("Will run program.elf\r\n");
+            serial_write("Good chance it will work but fail to return back here.\r\n");
+            elf_run("program.elf");
+            serial_write("back\r\n");
+        } else {
+            serial_write("Unknown command.\r\n");
+        }
+        serial_write("out of if\r\n");
+    }
 
     for (;;)
         ;

@@ -17,6 +17,9 @@ INCLUDEDIR := src/include
 SOURCEDIR := src/kernel
 BUILDDIR := build
 
+# File transfer program
+PICOCOM_FTP ?= sendelf_crc32
+# PICOCOM_FTP ?= sendtar_crc32
 
 # Compiler and linker flags
 CFLAGS += -ffreestanding -march=mips32r2 -msoft-float -Wa,-msoft-float -I$(INCLUDEDIR) -Wall -Wextra -Winline
@@ -40,7 +43,7 @@ OBJFILES += $(SYMSFILES:.syms=.syms.o)
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
 
-.PHONY: all clean install envcheck picocom sendelf_crc32 disasm
+.PHONY: all clean install envcheck picocom sendelf_crc32 sendtar_crc32 disasm
 .SUFFIXES:
 
 all: $(HEXFILE)
@@ -52,7 +55,7 @@ clean:
 	$(RM) -rf $(DEPDIR)
 
 picocom:
-	picocom -b 9600 -y n --send-cmd "./helpers/sendelf_crc32" $(TTYDEV)
+	picocom -b 9600 -y n --send-cmd "./helpers/$(PICOCOM_FTP)" $(TTYDEV)
 
 sendelf_crc32:
 	@echo "$(TARGET)" | grep mcb32 > /dev/null && { \
@@ -60,6 +63,14 @@ sendelf_crc32:
 		exit 1; \
 	} || { \
 		gcc -Wall -Wextra -o helpers/sendelf_crc32 helpers/sendelf_crc32.c; \
+	}
+
+sendtar_crc32:
+	@echo "$(TARGET)" | grep mcb32 > /dev/null && { \
+		echo "This should be compiled in the native environment!"; \
+		exit 1; \
+	} || { \
+		gcc -Wall -Wextra -o helpers/sendtar_crc32 helpers/sendtar_crc32.c; \
 	}
 
 disasm: envcheck
