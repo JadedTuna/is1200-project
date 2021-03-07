@@ -21,6 +21,7 @@ void i2c_setup(void) {
     // Clear anything from the receive register
     // This seems to help sometimes
     clear = I2C1RCV;
+    (void)clear;
 }
 
 /**
