@@ -117,12 +117,28 @@ _default_isr:
 .ent _gen_exception
 _gen_exception:
 	addi	$k0, $ra, 0
+	addi	$k1, $sp, 0
 
+	# Use kernel's stack
+	lw		$sp, sp_savemem
+
+	# Call C exception handler
 	jal	general_exception
+	nop
 
+	# Go back to user's stack
+	addi	$sp, $k1, 0
 	addi	$ra, $k0, 0
+
+	# Go to next instruction
+	mfc0	$k0, $14, 0
+	ehb
+	addi	$k0, $k0, 4
+	mtc0	$k0, $14, 0
+	ehb
+
 	eret
-	#Technically eret has no delay slot, so this shouldn't be needed
+	# Technically eret has no delay slot, so this shouldn't be needed
 	nop
 
 .end _gen_exception
