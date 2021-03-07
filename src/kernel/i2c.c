@@ -6,7 +6,7 @@
  * Setup registers for communication over I2C1
  */
 void i2c_setup(void) {
-    volatile uint8_t clear;
+    uint8_t clear;
 
     // Initialize
     I2C1CON = 0;
