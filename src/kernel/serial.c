@@ -149,7 +149,7 @@ void serial_hexdump(const void *data, size_t size) {
  */
 void serial_writebin(register uint32_t num) {
     char buf[34];
-    int i;
+    size_t i;
     for (i = 0; i < 32; i++)
         buf[i] = ((num >> (31 - i)) & 1) + '0';
     buf[32] = '\r';
