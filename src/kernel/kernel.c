@@ -41,6 +41,7 @@ void general_exception() {
     uint32_t cause;
     uint8_t exc_code;
     uint8_t v0;
+
     // In case this is a syscall
     __asm__("addi   %0, $a0, 0" : "=r"(srvnum));
     __asm__("addi   %0, $a1, 0" : "=r"(a0));
@@ -86,6 +87,8 @@ void general_exception() {
         break;
     }
     }
+
+    serial_write("Exiting exception handler.\r\n");
 }
 
 void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
