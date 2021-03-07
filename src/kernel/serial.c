@@ -143,6 +143,26 @@ void serial_hexdump(const void *data, size_t size) {
 }
 
 /**
+ * Write a 32-bit number as binary.
+ *
+ * @param num Number to display.
+ */
+void serial_writebin(register uint32_t num) {
+    char buf[34];
+    int i;
+    for (i = 0; i < 32; i++)
+        buf[i] = ((num >> (31 - i)) & 1) + '0';
+    buf[32] = '\r';
+    buf[33] = '\n';
+
+    for (i = 0; i < sizeof(buf); i++) {
+        while (!(U1STA & PIC32_USTA_TRMT))
+            ;
+        U1TXREG = buf[i];
+    }
+}
+
+/**
  * Read up to `size` bytes until \0.
  *
  * @param buffer Buffer to read into.
