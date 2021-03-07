@@ -196,6 +196,11 @@ size_t serial_read_string(void *buffer, size_t size) {
  */
 void serial_read(void *buffer, size_t size) {
     uint8_t *bufptr = buffer;
+
+    // Don't hang on reads of 0 bytes
+    if (!size)
+        return;
+
     do {
         // Wait until there is data available
         while (rx_buffer.head == rx_buffer.tail)
