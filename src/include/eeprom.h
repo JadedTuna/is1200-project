@@ -2,6 +2,7 @@
 #define _EEPROM_H
 
 #define I2C_EEPROM_ADDRESS 0b1010000
+#define EEPROM_SIZE 0x7FFF
 #include "eeprom.h"
 #include "i2c.h"
 

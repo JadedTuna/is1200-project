@@ -4,21 +4,13 @@
 
 #include <pic32mx.h>
 
-size_t eeprom_write(uint16_t addr, const void *data, size_t size) {
+size_t eeprom_write_page(uint16_t addr, const void *data, size_t size) {
     size_t i;
     const uint8_t *dataptr = (uint8_t *)data;
 
-    if (addr + size > 0x7FFF) {
-        /* Can't write that far! */
-        // FIXME
-    } else if (addr > 0x7FFF) {
-        /* Can't write that far! */
-        // FIXME
-    }
-
-    if (size > 64) {
-        // TODO: split this into several page writes
-    }
+    // TODO: error?
+    if (size > 64)
+        size = 64;
 
     /* Initiate write */
     do {
@@ -41,6 +33,30 @@ size_t eeprom_write(uint16_t addr, const void *data, size_t size) {
     i2c_end();
 
     return i;
+}
+
+size_t eeprom_write(uint16_t addr, const void *data, size_t size) {
+    const uint8_t *dataptr = (uint8_t *)data;
+
+    if (addr + size > 0x7FFF) {
+        /* Can't write that far! */
+        // FIXME
+    } else if (addr > 0x7FFF) {
+        /* Can't write that far! */
+        // FIXME
+    }
+
+    size_t chunk_size, written = 0;
+    while (size) {
+        chunk_size = size < 64 ? size : 64;
+        written += eeprom_write_page(addr, dataptr, chunk_size);
+
+        addr += chunk_size;
+        dataptr += chunk_size;
+        size -= chunk_size;
+    }
+
+    return written;
 }
 
 size_t eeprom_read(uint16_t addr, void *buffer, size_t size) {
