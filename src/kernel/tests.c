@@ -1,9 +1,10 @@
 #ifdef COMPILE_TESTS
-#include "eeprom.h"
-#include "i2c.h"
-#include "serial.h"
-#include "rom.h"
-#include "elf.h"
+
+    #include "eeprom.h"
+    #include "elf.h"
+    #include "i2c.h"
+    #include "rom.h"
+    #include "serial.h"
 
 void simple_delay(int cycles);
 

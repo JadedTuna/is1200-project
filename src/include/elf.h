@@ -1,7 +1,7 @@
 #ifndef _ELF_H
 #define _ELF_H
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /* These are ELF definitions */
 typedef uint16_t Elf32_Half; // Unsigned half int
@@ -15,17 +15,13 @@ typedef int32_t Elf32_Sword; // Signed int
 #define ELF_MAGIC_2 'L'
 #define ELF_MAGIC_3 'F'
 
-#define ELF_LSB     1       // Little Endian
-#define ELF_32      1       // 32-bit
-#define EM_MIPS     0x08    // MIPS architecture
-#define EV_CURRENT  0x01    // Current version is 1
+#define ELF_LSB 1       // Little Endian
+#define ELF_32 1        // 32-bit
+#define EM_MIPS 0x08    // MIPS architecture
+#define EV_CURRENT 0x01 // Current version is 1
 
 /* Unknown, relocatable, executable */
-typedef enum {
-    ET_NONE = 0,
-    ET_REL,
-    ET_EXEC
-} Elf_Type;
+typedef enum { ET_NONE = 0, ET_REL, ET_EXEC } Elf_Type;
 
 typedef struct {
     uint8_t e_magic[4];
