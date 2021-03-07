@@ -76,6 +76,7 @@ void general_exception() {
         serial_printf("BMXDKPBA: 0x%x\r\n", BMXDKPBA);
         serial_printf("BMXDUDBA: 0x%x\r\n", BMXDUDBA);
         serial_printf("BMXDUPBA: 0x%x\r\n", BMXDUPBA);
+        // FIXME: 0x80006800 should be a variable
         serial_hexdump((uint32_t *)sp, 0x80006800 - sp);
         for (;;) {
             // Blink between 0xff and the error code
