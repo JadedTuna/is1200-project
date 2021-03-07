@@ -81,8 +81,10 @@ uint8_t *elf_load_program_serial(void) {
         // Load segment
         crcread(segment, progheader.p_filesz);
         if (progheader.p_filesz != progheader.p_memsz) {
-            serial_printf("Segment needs to be zeroed: p_filesz: 0x%x, p_memsz: 0x%x\r\n",
-                progheader.p_filesz, progheader.p_memsz);
+            serial_printf(
+                "Segment needs to be zeroed: p_filesz: 0x%x, p_memsz: 0x%x\r\n",
+                progheader.p_filesz,
+                progheader.p_memsz);
             memset(segment + progheader.p_filesz, 0, progheader.p_memsz - progheader.p_filesz);
         }
     }

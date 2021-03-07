@@ -5,6 +5,7 @@
 #include "interrupts.h"
 #include "rom.h"
 #include "serial.h"
+#include "syscalls.h"
 #include "ustar.h"
 
 #include <pic32mx.h>
@@ -12,7 +13,7 @@
 #include <stdlib.h>
 
 void farcall(uint8_t *);
-void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2);
+uint32_t kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2);
 
 FILE *const stdout = 0; // FIXME: this really shouldn't be needed
 
@@ -35,8 +36,7 @@ void simple_delay(int cycles) {
     }
 }
 
-void general_exception() {
-    PORTE = 0xFF;
+uint32_t general_exception() {
     uint32_t srvnum, a0, a1, a2;
     uint32_t cause;
     uint8_t exc_code;
@@ -54,11 +54,11 @@ void general_exception() {
     __asm__("ehb");
 
     exc_code = (cause & 0xFF) >> 2;
-    serial_printf("general_exception(0x%x)\r\n", exc_code);
+    // serial_printf("general_exception(0x%x)\r\n", exc_code);
 
     switch (exc_code) {
     case 0x08: {
-        kernel_syscall(srvnum, a0, a1, a2);
+        return kernel_syscall(srvnum, a0, a1, a2);
         break;
     }
     default: {
@@ -89,20 +89,38 @@ void general_exception() {
     }
     }
 
-    serial_write("Exiting exception handler.\r\n");
+    // serial_write("Exiting exception handler.\r\n");
+    return 0;
 }
 
-void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
+uint32_t kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
     /*
         FIXME: address validation, don't let user execute syscalls on addresses
         they don't have access to.
     */
+    uint32_t ret = 0;
 
     switch (srvnum) {
-    case 4: {
-        // serial_write
-        serial_write((char *)a0);
-        serial_write("\r\n");
+    case SYSCALL_SERIAL_NWRITE: {
+        serial_nwrite((char *)a0, a1);
+        break;
+    }
+    case SYSCALL_BTN_STATES: {
+        // get button states
+        uint8_t state = 0;
+        // BTN 1
+        state |= (PORTF >> 1) & 1;
+        // BTN 2-4
+        state |= ((PORTD >> 5) & 0b111) << 1;
+        ret = state;
+        break;
+    }
+    case SYSCALL_SWTCH_STATES: {
+        // get switch states
+        uint8_t state = 0;
+        // SWTCH 1-4
+        state = ((PORTD >> 8) & 0b1111);
+        return state;
         break;
     }
     default: {
@@ -113,6 +131,8 @@ void kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) {
         break;
     }
     }
+
+    return ret;
 }
 
 void flash_ustar(void) {
@@ -168,12 +188,27 @@ void init(void) {
     i2c_setup();
 
     /* 6 KB of user memory; 4 KB data, 2 KB prog */
+    /*
     serial_write("Setting BMXDKPBA\r\n");
     BMXDKPBA = 14 * 1024;
     serial_write("Setting BMXDUDBA\r\n");
     BMXDUDBA = 26 * 1024;
     serial_write("Setting BMXDUPBA\r\n");
     BMXDUPBA = 30 * 1024;
+    */
+    PORTE = 0xAA;
+    serial_write("Setting BMXDKPBA\r\n");
+    // Kernel data = 8KB
+    BMXDKPBA = 8 * 1024;
+    serial_write("Setting BMXDUDBA\r\n");
+    // Optional kernel program = 0 KB
+    BMXDUDBA = 8 * 1024;
+    serial_write("Setting BMXDUPBA\r\n");
+    // User data = 20 - 8 = 12 KB
+    // User program = 32 - 20 = 12 KB
+    BMXDUPBA = 20 * 1024;
+
+    PORTE = 0xFB;
 
     serial_printf(
         "User data: %d bytes, user program: %d bytes\r\n",

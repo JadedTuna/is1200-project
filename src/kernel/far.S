@@ -9,7 +9,8 @@ farcall:
 	sw	$sp, sp_savemem
 
 	# FIXME: this should be a variable
-	li	$sp, 0x7F007800
+	# li	$sp, 0x7F007800
+	li	$sp, 0x7F005000
 
 	# Jump to user's entry point
 	jalr	$a0
