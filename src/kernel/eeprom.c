@@ -76,6 +76,7 @@ size_t eeprom_read(uint16_t addr, void *buffer, size_t size) {
     PORTE = 14;
 
     /* Finish write */
+    // Can hold line here
     i2c_end();
     PORTE = 15;
 
