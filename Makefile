@@ -55,7 +55,7 @@ clean:
 	$(RM) -rf $(DEPDIR)
 
 picocom:
-	picocom -b 9600 -y n --send-cmd "./helpers/$(PICOCOM_FTP)" $(TTYDEV)
+	picocom -b 19200 -y n --send-cmd "./helpers/$(PICOCOM_FTP)" $(TTYDEV)
 
 sendelf_crc32:
 	@echo "$(TARGET)" | grep mcb32 > /dev/null && { \
