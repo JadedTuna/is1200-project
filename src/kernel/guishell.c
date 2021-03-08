@@ -14,7 +14,7 @@ typedef struct {
 file_entry_t *filelist;
 size_t filelist_size;
 
-#define FILE_ENTRY_COUNT 3
+#define FILE_ENTRY_COUNT 3  // How many files should be shown at once
 int oct2bin(const char *data, size_t size);
 
 static void sleepms(int ms) {
@@ -29,11 +29,13 @@ static void draw_filelist(size_t start, size_t selected) {
     size_t i, j;
     for (i = start, j = 0; j < FILE_ENTRY_COUNT; i++, j++) {
         // Draw a file entry
-        display_rect(0, j * 11, 128, 10);
-        display_text(0, j * 11, filelist[i].name);
         if (i == selected) {
-            // Make it *bold*
-            display_rect(1, j * 11 + 1, 126, 8);
+            // Make it inverted
+            display_filled_rect(1, j * 11 + 1, 126, 8);
+            display_text_inverted(0, j * 11, filelist[i].name);
+        } else {
+            display_rect(0, j * 11, 128, 10);
+            display_text(0, j * 11, filelist[i].name);
         }
     }
 }
@@ -175,8 +177,6 @@ void graphical_shell(void) {
         } else if (state & 0b1000) {
             // BTN4 - up
             if (selected) {
-                // if (selected >= FILE_ENTRY_COUNT && selected - first_visible < FILE_ENTRY_COUNT)
-                // first_visible = selected - FILE_ENTRY_COUNT;
                 if (selected == first_visible)
                     first_visible--;
                 selected--;
@@ -192,8 +192,16 @@ void graphical_shell(void) {
             UStar_Fhdr fhdr;
             eeprom_read(filelist[selected].addr, &fhdr, sizeof(UStar_Fhdr));
             serial_printf("exec(%s)\r\n", fhdr.filename);
+            // Shutdown the display
+            // User code will initialize it again if needed
+            display_shutdown();
+
+            // Run the user program
             ELF_Status code = elf_run(fhdr.filename);
-            display_clear();
+
+            // Turn display back on
+            // This also clears it
+            display_init();
 
             switch (code) {
             case ELF_OK: {
@@ -227,9 +235,10 @@ void graphical_shell(void) {
             }
             display_update();
 
+            // Make sure result is seen
             sleepms(3000);
             display_clear();
-            draw_filelist(0, selected);
+            draw_filelist(first_visible, selected);
             display_update();
         }
     }
