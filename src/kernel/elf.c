@@ -158,6 +158,7 @@ ELF_Status elf_run(const char *filename) {
     uint16_t addr;
     size_t size;
     uint32_t ra;
+    ELF_Status result;
     __asm__("addi %0, $ra, 0" : "=r"(ra));
     serial_printf("ra: 0x%08x\r\n", ra);
     if (ustar_find_file(filename, &addr, &size) == USTAR_FOUND) {
@@ -169,7 +170,8 @@ ELF_Status elf_run(const char *filename) {
     (void)size;
 
     uint8_t *entry;
-    switch (elf_load_eeprom(addr, &entry)) {
+    result = elf_load_eeprom(addr, &entry);
+    switch (result) {
     case ELF_OK: {
         serial_write("ELF load successful.\r\n");
         serial_printf("Entry point: 0x%x\r\n", entry);
@@ -206,5 +208,5 @@ ELF_Status elf_run(const char *filename) {
 
     serial_write("about to return\r\n");
 
-    return ELF_OK;
+    return result;
 }
