@@ -14,6 +14,7 @@
 
 void farcall(uint8_t *);
 uint32_t kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2);
+void graphical_shell(void);
 
 FILE *const stdout = 0; // FIXME: this really shouldn't be needed
 
@@ -229,10 +230,17 @@ int main(void) {
     serial_write("Make sure you are using the correct file transfer program! "
                  "sendelf_crc32 for uploading a program, sendtar_crc32 for "
                  "flashing a filesystem\r\nThis is set up in the Makefile.\r\n");
+
+    while (((PORTD >> 8) & 0b1000)) {
+        // Jump straight to GUI
+        serial_write("Jumping to GUI\r\n");
+        graphical_shell();
+    }
     for (;;) {
         serial_write("Menu selection:\r\n"
                      "[F] flash filesystem\r\n"
                      "[U] upload program\r\n"
+                     "[G] start the graphical shell\r\n"
                      "[R] run program.elf from the filesystem\r\nYour selection: ");
         char choice;
         serial_read(&choice, 1);
@@ -247,6 +255,9 @@ int main(void) {
             serial_write("Doing farcall\r\n");
             farcall(entry_point);
             serial_write("Back in kernel!\r\n");
+        } else if (choice == 'G' || choice == 'g') {
+            serial_write("Starting graphical shell.\r\n");
+            graphical_shell();
         } else if (choice == 'R' || choice == 'r') {
             serial_write("Will run program.elf\r\n");
             serial_write("Good chance it will work but fail to return back here.\r\n");
