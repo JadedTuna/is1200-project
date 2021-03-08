@@ -175,9 +175,16 @@ void flash_ustar(void) {
 
 void init(void) {
     setup_interrupts();
-    TRISE &= ~0xFF;
+    // LEDs are outputs
+    TRISECLR = 0xFF;
+    // BTN1 are inputs
+    TRISFSET = 1;
+    // BTN2-4 are inputs
+    TRISDSET = 0b111 << 5;
+    // Switches are inputs
+    TRISDSET = 0b1111 << 8;
+
     PORTE = 0;
-    TRISF |= 1;
 
     // Clear PBCLK divisor
     OSCCONCLR = PIC32_OSCCON_PBDIV_MASK;
