@@ -195,6 +195,15 @@ void display_update(void) {
 }
 
 /**
+ * Clear the display.
+ */
+void display_clear(void) {
+    int i;
+    for (i = 0; i < DPY_BUFFER_SIZE; i++)
+        DPY_BUFFER[i] = 0;
+}
+
+/**
  * Draw a hollow rectangle (with wraparound and down).
  */
 void display_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
