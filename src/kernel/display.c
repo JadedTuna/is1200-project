@@ -6,6 +6,7 @@
 #include <string.h>
 
 uint8_t DPY_BUFFER[DPY_BUFFER_SIZE];
+int DPY_DID_INIT = 0;
 
 /**
  * Used in other places, but for the sake of clarity.
@@ -120,6 +121,9 @@ static void solomon_init(void) {
  * Initialize display by configuring SPI2, pins and display driver chip.
  */
 void display_init(void) {
+    if (display_did_init())
+        // Don't init twice
+        return;
     /* Zero out buffer */
     int i;
     for (i = 0; i < DPY_BUFFER_SIZE; i++)
@@ -129,6 +133,17 @@ void display_init(void) {
     spi2_init();
     display_pins_init();
     solomon_init();
+
+    DPY_DID_INIT = 1;
+}
+
+/**
+ * Check whether the display is initialized.
+ *
+ * @return Display init status.
+ */
+inline int display_did_init(void) {
+    return DPY_DID_INIT;
 }
 
 /**
@@ -147,6 +162,9 @@ void display_shutdown(void) {
 
     // Turn Vdd off
     PORTFSET = RF_SLM_VDD;
+
+    // Not initialized anymore
+    DPY_DID_INIT = 0;
 }
 
 /**
@@ -229,8 +247,19 @@ void display_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
         DPY_BUFFER[(row / 8) * DPY_COLS + column] |= 1 << (row % 8);
 }
 
-void display_ntext(uint8_t x, uint8_t y, const char *text, size_t size) {
-    size_t i, c, r;
+void display_filled_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+    uint8_t row, column;
+
+    // Draw from left to right, column by column
+    for (column = x; column < x + w; column++) {
+        for (row = y; row < y + h; row++) {
+            DPY_BUFFER[(row / 8) * DPY_COLS + column] |= 1 << (row % 8);
+        }
+    }
+}
+
+void display_ntext(uint8_t x, uint8_t y, const char *text, size_t size, int invert_color) {
+    size_t i, c, r, offset;
     uint8_t row, column;
     uint8_t coldata, bit;
 
@@ -243,12 +272,20 @@ void display_ntext(uint8_t x, uint8_t y, const char *text, size_t size) {
             for (row = y, r = 0; row < y + 8; row++, r++) {
                 // Render each row bit
                 bit = (coldata >> r) & 1;
-                DPY_BUFFER[(row / 8) * DPY_COLS + column] |= bit << (row % 8);
+                offset = (row / 8) * DPY_COLS + column;
+                if (invert_color)
+                    DPY_BUFFER[offset] &= ~(bit << (row % 8));
+                else
+                    DPY_BUFFER[offset] |= bit << (row % 8);
             }
         }
     }
 }
 
 void display_text(uint8_t x, uint8_t y, const char *text) {
-    display_ntext(x, y, text, strlen(text));
+    display_ntext(x, y, text, strlen(text), 0);
+}
+
+void display_text_inverted(uint8_t x, uint8_t y, const char *text) {
+    display_ntext(x, y, text, strlen(text), 1);
 }

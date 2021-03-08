@@ -15,6 +15,7 @@
 #define DPY_ROWS 32
 
 extern uint8_t DPY_BUFFER[DPY_BUFFER_SIZE];
+extern int DPY_DID_INIT;
 extern const uint8_t const font[128 * 8];
 
 void display_init(void);
@@ -23,7 +24,10 @@ void display_update(void);
 void display_shutdown(void);
 void display_clear(void);
 void display_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
-void display_ntext(uint8_t x, uint8_t y, const char *text, size_t size);
+void display_filled_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+void display_ntext(uint8_t x, uint8_t y, const char *text, size_t size, int invert_color);
 void display_text(uint8_t x, uint8_t y, const char *text);
+void display_text_inverted(uint8_t x, uint8_t y, const char *text);
+int display_did_init(void);
 
 #endif /* _PROG_DISPLAY_H */
