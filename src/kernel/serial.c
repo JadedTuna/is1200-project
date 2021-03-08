@@ -25,6 +25,8 @@ void uart1rx_int_set(char enabled) {
  */
 void serial_init(void) {
     rx_buffer.head = rx_buffer.tail = 0;
+    // Buffer enable
+    rx_buffer.enabled = 1;
 
     // UART1 setup
     // U1BRG = PIC32_BRG_BAUD(80 / 2 * 1000 * 1000, 9600); // set baud rate to 9600
@@ -212,3 +214,44 @@ void serial_read(void *buffer, size_t size) {
         rx_buffer.tail %= RX_BUFFER_SIZE;
     } while (--size);
 }
+
+inline void serial_putc(char c) {
+    while (!(U1STA & PIC32_USTA_TRMT))
+        ;
+    U1TXREG = c;
+}
+
+inline char serial_getc(void) {
+    char c;
+    if (rx_buffer.enabled) {
+        // Wait until there is data available
+        while (rx_buffer.head == rx_buffer.tail)
+            ;
+        // Read next byte and advance tail
+        c = rx_buffer.buffer[rx_buffer.tail++];
+        // Keep it in check
+        rx_buffer.tail %= RX_BUFFER_SIZE;
+    } else {
+        // Unbuffered read
+        while (!(U1STA & PIC32_USTA_URXDA))
+            ;
+        c = U1RXREG;
+    }
+
+    return c;
+}
+
+int serial_getc_nonblock(void) {
+    char c;
+    // Check if there is data available
+    if (rx_buffer.head == rx_buffer.tail)
+        return -1;
+    // Read next byte and advance tail
+    c = rx_buffer.buffer[rx_buffer.tail++];
+    // Keep it in check
+    rx_buffer.tail %= RX_BUFFER_SIZE;
+
+    return c;
+}
+
+inline void serial_rxbuf(int enabled) { rx_buffer.enabled = !!enabled; }

@@ -103,7 +103,25 @@ uint32_t kernel_syscall(uint32_t srvnum, uint32_t a0, uint32_t a1, uint32_t a2) 
 
     switch (srvnum) {
     case SYSCALL_SERIAL_NWRITE: {
-        serial_nwrite((char *)a0, a1);
+        serial_nwrite((const char *)a0, a1);
+        break;
+    }
+    case SYSCALL_SERIAL_PUTC: {
+        serial_putc(a0);
+        break;
+    }
+    case SYSCALL_SERIAL_GETC: {
+        int tmp = rx_buffer.enabled;
+        serial_rxbuf(0);
+        ret = serial_getc();
+        serial_rxbuf(tmp);
+        break;
+    }
+    case SYSCALL_SERIAL_READLINE: {
+        int tmp = rx_buffer.enabled;
+        serial_rxbuf(0);
+        ret = serial_readline((char *)a0, a1);
+        serial_rxbuf(tmp);
         break;
     }
     case SYSCALL_BTN_STATES: {

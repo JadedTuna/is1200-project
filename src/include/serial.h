@@ -9,6 +9,7 @@ typedef struct {
     uint8_t buffer[RX_BUFFER_SIZE];
     volatile uint32_t head;
     volatile uint32_t tail;
+    volatile uint8_t enabled;
 } ring_buffer_t;
 extern ring_buffer_t rx_buffer, tx_buffer;
 
@@ -23,5 +24,13 @@ void serial_hexdump(const void *data, size_t size);
 
 size_t serial_read_string(void *buffer, size_t size);
 void serial_read(void *buffer, size_t size);
+
+void serial_putc(char c);
+char serial_getc(void);
+int serial_getc_nonblock(void);
+
+size_t serial_readline(char *buffer, size_t size);
+
+void serial_rxbuf(int enabled);
 
 #endif /* _SERIAL_H */
