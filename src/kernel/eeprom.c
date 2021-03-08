@@ -79,7 +79,7 @@ size_t eeprom_read(uint16_t addr, void *buffer, size_t size) {
     i2c_end();
     PORTE = 15;
 
-    /* Initiate write */
+    /* Initiate read */
     do {
         i2c_begin();
     } while (!i2c_send((I2C_EEPROM_ADDRESS << 1) | 1));
@@ -97,6 +97,7 @@ size_t eeprom_read(uint16_t addr, void *buffer, size_t size) {
         bufptr[i] = byte;
     }
 
+    /* Finish read */
     i2c_nack();
     i2c_end();
     PORTE = 18;
